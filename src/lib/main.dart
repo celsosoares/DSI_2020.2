@@ -27,11 +27,11 @@ class _RandomWordsState extends State<RandomWords> {
   final _suggestions = <WordPair>[];
   final _saved = <WordPair>{};
   final _biggerFont = const TextStyle(fontSize: 18);
+  late WordPair _wordPair;
 
   void _pushSaved() {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        // NEW lines from here...
         builder: (BuildContext context) {
           final tiles = _saved.map(
             (WordPair pair) {
@@ -54,12 +54,37 @@ class _RandomWordsState extends State<RandomWords> {
             ),
             body: ListView(children: divided),
           );
-        }, // ...to here.
+        },
       ),
     );
   }
 
-  Widget _buildRow(WordPair pair) {
+  Widget _buildSuggestions() {
+    return ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemBuilder: (BuildContext _context, int i) {
+          if (i.isOdd) {
+            return Divider();
+          }
+          final int index = i ~/ 2;
+          if (index >= _suggestions.length) {
+            _suggestions.addAll(generateWordPairs().take(10));
+          }
+          return _buildRow(_suggestions[index], index);
+        });
+  }
+
+   @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('Startup Name Generator'), actions: [
+        IconButton(icon: Icon(Icons.list), onPressed: _pushSaved),
+      ]),
+      body: _buildSuggestions(),
+    );
+  }
+
+  Widget _buildRow(WordPair pair, int index) {
     final alreadySaved = _saved.contains(pair);
 
     return Dismissible(
@@ -73,69 +98,83 @@ class _RandomWordsState extends State<RandomWords> {
       },
       key: Key(pair.hashCode.toString()),
       child: ListTile(
-        title: Text(
-          pair.asPascalCase,
-          style: _biggerFont,
+            title: Text(pair.asPascalCase, style: _biggerFont),
+            trailing: IconButton(
+              icon: alreadySaved ? Icon(Icons.favorite) : Icon(
+                  Icons.favorite_border),
+              color: alreadySaved ? Colors.red : null,
+              onPressed: () {
+                setState(() {
+                  if (alreadySaved) {
+                    Icon(Icons.favorite_border, color: null,);
+                    _saved.remove(pair);
+                  } else {
+                    Icon(Icons.favorite, color: Colors.red,);
+                    _saved.add(pair);
+                  }
+                });
+              },
+            ),
+            onTap: () => _toEditon(context, pair, index)
         ),
-        trailing: Icon(
-          alreadySaved ? Icons.favorite : Icons.favorite_border,
-          color: alreadySaved ? Colors.red : null,
-        ),
-        onTap: () {
-          // NEW lines from here...
-          setState(() {
-            if (alreadySaved) {
-              _saved.remove(pair);
-            } else {
-              _saved.add(pair);
+    );
+  }
+
+  _toEditon(context, pair, int index) {
+    Navigator.of(context).push(
+        MaterialPageRoute(
+            builder: (BuildContext context) {
+              _wordPair = pair;
+              return Scaffold(
+                appBar: AppBar(
+                  title: Text('Edit item'),),
+                body: Container(
+                    color: Colors.white,
+                    child: _buildForm(context, pair, index)),
+              );
             }
-          });
-        },
+        )
+    );
+  }
+
+  _buildForm(context, pair, int index) {
+    String first = '';
+    String second = '';
+    return Form(
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        runSpacing: 16.0,
+        children: <Widget>[
+          TextField(
+            keyboardType: TextInputType.text,
+            decoration: const InputDecoration(labelText: 'First word'),
+            onChanged: (newValue) {
+              first = newValue;
+            },
+          ),
+          TextField(
+            keyboardType: TextInputType.text,
+            decoration: const InputDecoration(labelText: 'Second word'),
+            onChanged: (value) {
+              second = value;
+            },
+          ),
+          SizedBox(
+            width: double.infinity,
+          ),
+          ElevatedButton(
+            onPressed: () => _save(context, index, first, second),
+            child: Text('Save'),
+          ),
+        ],
       ),
     );
-
   }
 
-  Widget _buildSuggestions() {
-    return ListView.builder(
-        padding: const EdgeInsets.all(16),
-        // The itemBuilder callback is called once per suggested
-        // word pairing, and places each suggestion into a ListTile
-        // row. For even rows, the function adds a ListTile row for
-        // the word pairing. For odd rows, the function adds a
-        // Divider widget to visually separate the entries. Note that
-        // the divider may be difficult to see on smaller devices.
-        itemBuilder: (BuildContext _context, int i) {
-          // Add a one-pixel-high divider widget before each row
-          // in the ListView.
-          if (i.isOdd) {
-            return Divider();
-          }
-
-          // The syntax "i ~/ 2" divides i by 2 and returns an
-          // integer result.
-          // For example: 1, 2, 3, 4, 5 becomes 0, 1, 1, 2, 2.
-          // This calculates the actual number of word pairings
-          // in the ListView,minus the divider widgets.
-          final int index = i ~/ 2;
-          // If you've reached the end of the available word
-          // pairings...
-          if (index >= _suggestions.length) {
-            // ...then generate 10 more and add them to the
-            // suggestions list.
-            _suggestions.addAll(generateWordPairs().take(10));
-          }
-          return _buildRow(_suggestions[index]);
-        });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('Startup Name Generator'), actions: [
-        IconButton(icon: Icon(Icons.list), onPressed: _pushSaved),
-      ]),
-      body: _buildSuggestions(),
-    );
+  void _save(BuildContext context, int index, first, second) {
+    setState(() {
+      _wordPair = WordPair(first, second);
+      _suggestions[index] = _wordPair;
+    });
   }
 }
