@@ -74,7 +74,7 @@ class _RandomWordsState extends State<RandomWords> {
         });
   }
 
-   @override
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text('Startup Name Generator'), actions: [
