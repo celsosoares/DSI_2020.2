@@ -1,5 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.src">
+    package="com.flutter.firebase.example.flutterfirestore">
    <application
         android:label="src"
         android:icon="@mipmap/ic_launcher">

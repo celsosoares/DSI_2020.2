@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:english_words/english_words.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/foundation.dart';
+
 
 void main() => runApp(MyApp());
 
@@ -7,174 +10,68 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Startup Name Generator',
+      title: 'Band Names',
       theme: ThemeData(
         primaryColor: Colors.purple,
       ),
-      home: RandomWords(),
+      home: MyHomePage(title: 'Band Names'),
     );
   }
 }
 
-class RandomWords extends StatefulWidget {
-  const RandomWords({Key? key}) : super(key: key);
+class MyHomePage extends StatelessWidget {
+  const MyHomePage({Key? key, required this.title}) : super(key: key);
 
-  @override
-  _RandomWordsState createState() => _RandomWordsState();
-}
+  final String title;
+  final documents = DocumentSnapshot;
 
-class _RandomWordsState extends State<RandomWords> {
-  final _suggestions = <WordPair>[];
-  final _saved = <WordPair>{};
-  final _biggerFont = const TextStyle(fontSize: 18);
-  late WordPair _wordPair;
-
-  void _pushSaved() {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (BuildContext context) {
-          final tiles = _saved.map(
-            (WordPair pair) {
-              return ListTile(
-                title: Text(
-                  pair.asPascalCase,
-                  style: _biggerFont,
-                ),
-              );
-            },
-          );
-          final divided = ListTile.divideTiles(
-            context: context,
-            tiles: tiles,
-          ).toList();
-
-          return Scaffold(
-            appBar: AppBar(
-              title: Text('Saved Suggestions'),
+  Widget _buildListItem(BuildContext context,  DocumentSnapshot documents) {
+    return ListTile(
+      title: Row(
+        children: [
+          Expanded(child: Text(
+            documents['Name'],
+            style: Theme.of(context).textTheme.headline3,
+            )
+          ),
+          Container(
+            decoration: const BoxDecoration(
+              color: Color(0xffddddff)
             ),
-            body: ListView(children: divided),
-          );
-        },
+            padding: const EdgeInsets.all(10.0),
+            child: Text(
+              documents['Votes'].toString(),
+              style: Theme.of(context).textTheme.headline3,
+            ),
+          )
+        ],
       ),
+      onTap: () {
+        print("Should increase votes here.");
+      },
     );
-  }
-
-  Widget _buildSuggestions() {
-    return ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemBuilder: (BuildContext _context, int i) {
-          if (i.isOdd) {
-            return Divider();
-          }
-          final int index = i ~/ 2;
-          if (index >= _suggestions.length) {
-            _suggestions.addAll(generateWordPairs().take(10));
-          }
-          return _buildRow(_suggestions[index], index);
-        });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Startup Name Generator'), actions: [
-        IconButton(icon: Icon(Icons.list), onPressed: _pushSaved),
-      ]),
-      body: _buildSuggestions(),
-    );
-  }
-
-  Widget _buildRow(WordPair pair, int index) {
-    final alreadySaved = _saved.contains(pair);
-
-    return Dismissible(
-      background: Container(
-        color: Colors.black,
+      appBar: AppBar(
+        title: Text(title),
       ),
-      onDismissed: (direction){
-        setState(() {
-          _suggestions.remove(pair);
-        });
-      },
-      key: Key(pair.hashCode.toString()),
-      child: ListTile(
-            title: Text(pair.asPascalCase, style: _biggerFont),
-            trailing: IconButton(
-              icon: alreadySaved ? Icon(Icons.favorite) : Icon(
-                  Icons.favorite_border),
-              color: alreadySaved ? Colors.red : null,
-              onPressed: () {
-                setState(() {
-                  if (alreadySaved) {
-                    Icon(Icons.favorite_border, color: null,);
-                    _saved.remove(pair);
-                  } else {
-                    Icon(Icons.favorite, color: Colors.red,);
-                    _saved.add(pair);
-                  }
-                });
-              },
-            ),
-            onTap: () => _toEditon(context, pair, index)
-        ),
-    );
-  }
-
-  _toEditon(context, pair, int index) {
-    Navigator.of(context).push(
-        MaterialPageRoute(
-            builder: (BuildContext context) {
-              _wordPair = pair;
-              return Scaffold(
-                appBar: AppBar(
-                  title: Text('Edit item'),),
-                body: Container(
-                    color: Colors.white,
-                    child: _buildForm(context, pair, index)),
-              );
-            }
-        )
-    );
-  }
-
-  _buildForm(context, pair, int index) {
-    String first = '';
-    String second = '';
-    return Form(
-      child: Wrap(
-        alignment: WrapAlignment.center,
-        runSpacing: 16.0,
-        children: <Widget>[
-          TextField(
-            keyboardType: TextInputType.text,
-            decoration: const InputDecoration(labelText: 'First word'),
-            onChanged: (newValue) {
-              first = newValue;
-            },
-          ),
-          TextField(
-            keyboardType: TextInputType.text,
-            decoration: const InputDecoration(labelText: 'Second word'),
-            onChanged: (value) {
-              second = value;
-            },
-          ),
-          SizedBox(
-            width: double.infinity,
-          ),
-          ElevatedButton(
-            onPressed: () => _save(context, index, first, second),
-            child: Text('Save'),
-          ),
-        ],
+      body: StreamBuilder <QuerySnapshot>(
+        stream: FirebaseFirestore.instance.collection('bandnames').snapshots(),
+        builder: (context, snapshots){
+          if (!snapshots.hasData) return const Text('Loading...');{
+            var doc = DocumentSnapshot;
+            return ListView.builder(
+              itemExtent: 80.0,
+              itemCount: snapshots.data!.docs.length,
+              itemBuilder: (context, index) =>
+                _buildListItem(context, snapshots.data!.docs[index]),
+            );
+          }
+        }
       ),
     );
-  }
-
-  void _save(BuildContext context, int index, first, second) {
-    setState(() {
-      _wordPair = WordPair(first, second);
-      _suggestions[index] = _wordPair;
-    });
   }
 }
